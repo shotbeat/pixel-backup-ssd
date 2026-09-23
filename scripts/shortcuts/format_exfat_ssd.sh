@@ -12,6 +12,41 @@ pause() {
   read DUMMY
 }
 
+# --- spinner: show progress while a long command runs ---------------------
+# Usage: spin "label" command args...
+# Skipped when there is no terminal (e.g. run over adb). The command's own
+# output is captured and printed once it finishes, so it doesn't fight the
+# spinner for the same line.
+spin() {
+  _lbl="$1"; shift
+  _dir=/data/local/tmp
+  [ -w "$_dir" ] || _dir=${TMPDIR:-/tmp}
+  if [ ! -t 1 ] || [ ! -w "$_dir" ]; then
+    "$@"
+    return $?
+  fi
+  _log="$_dir/.ssd_spin.out"
+  _rcl="$_dir/.ssd_spin.rc"
+  rm -f "$_rcl" 2>/dev/null
+  ( "$@" >"$_log" 2>&1; echo $? >"$_rcl" 2>/dev/null ) &
+  _pid=$!
+  _n=0
+  while [ ! -f "$_rcl" ]; do
+    case $((_n % 4)) in
+      0) _c='|' ;; 1) _c='/' ;; 2) _c='-' ;; 3) _c='\' ;;
+    esac
+    printf '\r  %s  %s  (%ss)   ' "$_c" "$_lbl" "$((_n / 5))"
+    _n=$((_n + 1))
+    sleep 0.2
+  done
+  wait "$_pid" 2>/dev/null
+  printf '\r\033[K'
+  cat "$_log" 2>/dev/null
+  _rc=$(cat "$_rcl" 2>/dev/null)
+  rm -f "$_log" "$_rcl" 2>/dev/null
+  return "${_rc:-1}"
+}
+
 # --- confirmation (before escalating to root, so it shows in the terminal) ---
 if [ "$1" != "CONFIRMED" ]; then
   echo ""
@@ -64,11 +99,13 @@ if mount | grep -q "$BLOCK "; then
 fi
 
 echo "Erasing and formatting $BLOCK as exFAT (label BACKUP) ..."
-if LD_LIBRARY_PATH=$TOOLS/lib $TOOLS/mkfs.exfat -F -L BACKUP "$BLOCK"; then
+# writing the filesystem has a visible pause - keep a spinner going so it's
+# obvious the phone is still working
+if spin "Writing exFAT filesystem" env LD_LIBRARY_PATH=$TOOLS/lib $TOOLS/mkfs.exfat -F -L BACKUP "$BLOCK"; then
   blockdev --rereadpt "$BLOCK" 2>/dev/null
   echo ""
   echo "DONE: SSD is now exFAT (label BACKUP). Safe to use on Mac/Windows."
-    echo "To switch back to the backup drive, tap 'Format -> ext4' then 'Mount SSD'."
+  echo "To switch back to the backup drive, tap 'Format -> ext4' then 'Mount SSD'."
 else
   echo ""
   echo "FORMAT FAILED - see message above."
