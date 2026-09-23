@@ -328,7 +328,7 @@ pixel-backup-ssd/
 ├── install.sh                   ← automated installer (runs on your Mac/Linux box)
 ├── DEVLOG.md                    ← full technical write-up, every gotcha + why
 └── scripts/
-    ├── phone/                   →  copied to /data/local/tmp/pixel-backup-gang/
+    ├── phone/                   →  copied to /data/local/tmp/pixel-backup-ssd/
     │   ├── mount_drive.sh         (drive detection + mount orchestration)
     │   ├── mount_ext4.sh          (ext4 mount + sdcardfs bind)
     │   └── unmount.sh             (reverse of the above)
@@ -363,7 +363,7 @@ chmod +x install.sh
 The installer will:
 
 - find your phone via `adb`
-- push the three core scripts to `/data/local/tmp/pixel-backup-gang/`
+- push the three core scripts to `/data/local/tmp/pixel-backup-ssd/`
 - install the five button scripts into `~/.shortcuts/` with the correct owner, permissions
   and SELinux context
 - download and install the **exFAT tooling** (`mkfs.exfat` + libraries) needed by the
@@ -382,18 +382,18 @@ Set these once in your shell:
 
 ```bash
 P=YOUR-SERIAL                                   # from `adb devices`
-PBG=/data/local/tmp/pixel-backup-gang
+SSD=/data/local/tmp/pixel-backup-ssd
 TH=/data/data/com.termux/files/home
 ```
 
 **1. Core scripts (root-owned)**
 
 ```bash
-adb -s $P shell "su -c 'mkdir -p $PBG'"
-adb -s $P push scripts/phone/mount_drive.sh  $PBG/
-adb -s $P push scripts/phone/mount_ext4.sh   $PBG/
-adb -s $P push scripts/phone/unmount.sh      $PBG/
-adb -s $P shell "su -c 'chmod 755 $PBG/*.sh'"
+adb -s $P shell "su -c 'mkdir -p $SSD'"
+adb -s $P push scripts/phone/mount_drive.sh  $SSD/
+adb -s $P push scripts/phone/mount_ext4.sh   $SSD/
+adb -s $P push scripts/phone/unmount.sh      $SSD/
+adb -s $P shell "su -c 'chmod 755 $SSD/*.sh'"
 ```
 
 **2. Button scripts (must be owned by the Termux user)**

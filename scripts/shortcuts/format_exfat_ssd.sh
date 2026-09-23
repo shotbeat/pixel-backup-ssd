@@ -68,7 +68,7 @@ if LD_LIBRARY_PATH=$TOOLS/lib $TOOLS/mkfs.exfat -F -L BACKUP "$BLOCK"; then
   blockdev --rereadpt "$BLOCK" 2>/dev/null
   echo ""
   echo "DONE: SSD is now exFAT (label BACKUP). Safe to use on Mac/Windows."
-  echo "To use it for pixel-backup again, tap 'Format -> ext4' then 'Mount SSD'."
+    echo "To switch back to the backup drive, tap 'Format -> ext4' then 'Mount SSD'."
 else
   echo ""
   echo "FORMAT FAILED - see message above."

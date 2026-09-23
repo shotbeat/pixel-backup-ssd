@@ -11,7 +11,7 @@
 #
 # What it does:
 #   1. checks adb + root
-#   2. pushes the 3 core scripts to  /data/local/tmp/pixel-backup-gang/
+#   2. pushes the 3 core scripts to  /data/local/tmp/pixel-backup-ssd/
 #   3. installs the 5 button scripts to ~/.shortcuts/ inside Termux
 #      (correct owner, mode and SELinux context)
 #   4. downloads + installs the exFAT tooling (mkfs.exfat + libraries)
@@ -22,9 +22,9 @@
 set -euo pipefail
 
 # ---------------------------------------------------------------- config ----
-PBG_DIR="/data/local/tmp/pixel-backup-gang"
+SSD_DIR="/data/local/tmp/pixel-backup-ssd"
 TOOLS_DIR="/data/local/tmp/format-tools"
-STAGE_DIR="/data/local/tmp/pbg-stage"
+STAGE_DIR="/data/local/tmp/ssd-stage"
 TERMUX_HOME="/data/data/com.termux/files/home"
 SHORTCUTS_DIR="$TERMUX_HOME/.shortcuts"
 TERMUX_REPO="https://packages.termux.dev/apt/termux-main"
@@ -95,12 +95,12 @@ case "$ROOTID" in
 esac
 
 # ------------------------------------------------------------ 1. core scripts
-step "Installing core scripts -> $PBG_DIR"
-su_sh "mkdir -p $PBG_DIR" >/dev/null
+step "Installing core scripts -> $SSD_DIR"
+su_sh "mkdir -p $SSD_DIR" >/dev/null
 for f in $CORE_SCRIPTS; do
-  adb_s push "$REPO_DIR/scripts/phone/$f" "$PBG_DIR/$f" >/dev/null
+  adb_s push "$REPO_DIR/scripts/phone/$f" "$SSD_DIR/$f" >/dev/null
 done
-su_sh "chmod 755 $PBG_DIR/*.sh" >/dev/null
+su_sh "chmod 755 $SSD_DIR/*.sh" >/dev/null
 ok "core scripts installed"
 
 # --------------------------------------------------------- 2. Termux buttons

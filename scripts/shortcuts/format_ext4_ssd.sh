@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/sh
-# "Format SSD -> pixel-backup (ext4)" - ERASES the SSD and formats it as ext4
+# "Format SSD -> ext4" - ERASES the SSD and formats it as ext4
 # (label DRIVE) so the Mount SSD button always finds it.
 # Asks for confirmation in the terminal before erasing.
 
@@ -16,7 +16,7 @@ if [ "$1" != "CONFIRMED" ]; then
   echo ""
   echo "=============================================="
   echo "!!  WARNING  !!  This will ERASE the SSD."
-  echo "Formatting it as ext4 (label DRIVE) for pixel-backup-gang."
+  echo "Formatting it as ext4 (label DRIVE) for the photo backup."
   echo "=============================================="
   echo ""
   echo "Type YES and press Enter to continue."
@@ -69,7 +69,7 @@ if mkfs.ext4 -F -L DRIVE -O ^metadata_csum,^64bit "$BLOCK"; then
   blockdev --rereadpt "$BLOCK" 2>/dev/null
   echo ""
   echo "DONE: SSD is now ext4 (label DRIVE)."
-  echo "Tap 'Mount SSD' to use it for pixel-backup-gang."
+    echo "Tap 'Mount SSD' to use it for photo backup."
 else
   echo ""
   echo "FORMAT FAILED - see message above."

@@ -1,4 +1,4 @@
-# Pixel Backup Gang — External SSD Setup (Pixel 1 / marlin)
+# Pixel Backup SSD — External SSD Setup (Pixel 1 / Pixel XL)
 
 > **What this is:** Full documentation of the setup that mounts a 1 TB external SSD into a Google Pixel 1's
 > internal storage so Google Photos backs up photos/videos at original quality (free unlimited perk of Pixel 1).
@@ -13,7 +13,7 @@
 > for anything that happens to your phone, your SSD, your data or your hardware. No liability is accepted.
 > See [§11 Disclaimer](#11-disclaimer).
 
-## What this project adds to pixel-backup-gang
+## What this project adds to the original
 
 The original [pixel-backup-gang](https://github.com/master-hax/pixel-backup-gang) is a clean, purpose-built
 toolkit, and it handles the genuinely difficult part: the ext4 mount, SELinux relabelling and the sdcardfs
@@ -79,7 +79,7 @@ keep the phone ventilated and give it a break if it's hot to the touch.
 2. [The 5 home-screen buttons](#2-the-home-screen-buttons-5)
 3. [Files on the phone](#3-files-on-the-phone)
 4. [Scripts — full contents](#4-scripts--full-contents)
-5. [Modifications to pixel-backup-gang](#5-modifications-to-pixel-backup-gang)
+5. [Modifications to the original scripts](#5-modifications-to-the-original-scripts)
 6. [CRITICAL technical gotchas (read this first)](#6-critical-technical-gotchas-read-this-first)
 7. [How to rebuild from scratch](#7-how-to-rebuild-from-scratch)
 8. [Verified current state](#8-verified-current-state)
@@ -136,14 +136,18 @@ except the ones noted).
 | Path | Purpose |
 |---|---|
 | `/data/data/com.termux/files/home/.shortcuts/` | The 5 button scripts (owned by Termux user, SELinux `app_data_file`) |
-| `/data/local/tmp/pixel-backup-gang/` | The core scripts (from pixel-backup-gang release + my `mount_drive.sh` helper) |
+| `/data/local/tmp/pixel-backup-ssd/` | The core scripts (the original mount/unmount scripts + my `mount_drive.sh` helper) |
 | `/data/local/tmp/format-tools/` | `mkfs.exfat` + `lib/` (libblkid.so, libandroid-posix-semaphore.so) — needed by the exFAT button |
-| `/data/local/tmp/pixel-backup-gang/mount_drive.sh` | **My** auto-mount helper (the "brain" of the Mount button) |
-| `/data/local/tmp/pixel-backup-gang/mount_ext4.sh` | Original script, **modified** (tolerant namespace guard) |
-| `/data/local/tmp/pixel-backup-gang/unmount.sh` | Original script, **modified** (tolerant namespace guard) |
+| `/data/local/tmp/pixel-backup-ssd/mount_drive.sh` | **My** auto-mount helper (the "brain" of the Mount button) |
+| `/data/local/tmp/pixel-backup-ssd/mount_ext4.sh` | Original script, **modified** (tolerant namespace guard) |
+| `/data/local/tmp/pixel-backup-ssd/unmount.sh` | Original script, **modified** (tolerant namespace guard) |
 | `/mnt/my_drive` | Where the SSD is mounted (ext4) |
 | `/mnt/my_drive/the_binding` | The folder on the SSD that apps see |
 | `/storage/emulated/0/the_binding` | The "internal storage" view of the SSD (this is what apps/Photos see) |
+
+> **Note (Sept 2026):** these scripts used to live in `/data/local/tmp/pixel-backup-gang/`. The folder is now
+> `/data/local/tmp/pixel-backup-ssd/`, named after this project rather than the original's. A phone set up
+> before the rename still has the old folder — re-run `install.sh` to migrate it, then delete the old one.
 
 The mount is **not persistent** — it is gone after a reboot or unplug. Re-mount with the **Mount SSD** button.
 
@@ -156,7 +160,7 @@ The mount is **not persistent** — it is gone after a reboot or unplug. Re-moun
 #!/data/data/com.termux/files/usr/bin/sh
 # "Mount SSD" - tap to mount the SSD and rescan so Google Photos sees new files.
 echo "=== Mount SSD ==="
-if sh /data/local/tmp/pixel-backup-gang/mount_drive.sh; then
+if sh /data/local/tmp/pixel-backup-ssd/mount_drive.sh; then
   echo ""
   echo "OK: SSD mounted. New photos should appear in Google Photos."
 else
@@ -170,17 +174,17 @@ echo "You can close this window now."
 ```sh
 #!/data/data/com.termux/files/usr/bin/sh
 # "Unmount SSD" - tap to safely unmount the SSD before unplugging.
-# Only relevant when the SSD is mounted via pixel-backup-gang (ext4 mode).
+# Only relevant when the SSD is mounted in ext4 mode (see the Mount SSD button).
 SU="su"; command -v su >/dev/null 2>&1 || SU="/sbin/su"
 echo "=== Unmount SSD ==="
 if ! grep -q ' /mnt/my_drive ' /proc/mounts; then
-  echo "The SSD is not mounted by pixel-backup-gang."
+  echo "The SSD is not mounted."
   echo "(It's likely exFAT for use on other devices, or not plugged in.)"
   echo "Nothing to unmount - no action needed."
   echo "You can close this window now."
   exit 0
 fi
-if "$SU" -M -c 'sh /data/local/tmp/pixel-backup-gang/unmount.sh'; then
+if "$SU" -M -c 'sh /data/local/tmp/pixel-backup-ssd/unmount.sh'; then
   echo ""
   echo "OK: SSD unmounted. Safe to unplug now."
 else
@@ -210,7 +214,7 @@ if [ "$1" != "CONFIRMED" ]; then
   echo ""
   echo "=============================================="
   echo "!!  WARNING  !!  This will ERASE the SSD."
-  echo "Formatting it as ext4 (label DRIVE) for pixel-backup-gang."
+  echo "Formatting it as ext4 (label DRIVE) for the photo backup."
   echo "=============================================="
   echo ""
   echo "Type YES and press Enter to continue."
@@ -263,7 +267,7 @@ if mkfs.ext4 -F -L DRIVE -O ^metadata_csum,^64bit "$BLOCK"; then
   blockdev --rereadpt "$BLOCK" 2>/dev/null
   echo ""
   echo "DONE: SSD is now ext4 (label DRIVE)."
-  echo "Tap 'Mount SSD' to use it for pixel-backup-gang."
+  echo "Tap 'Mount SSD' to use it for photo backup."
 else
   echo ""
   echo "FORMAT FAILED - see message above."
@@ -352,7 +356,7 @@ pause
 ```
 
 ### 4.5 `mount_drive.sh` (my helper — core of the Mount button)
-Lives in `/data/local/tmp/pixel-backup-gang/mount_drive.sh`.
+Lives in `/data/local/tmp/pixel-backup-ssd/mount_drive.sh`.
 ```sh
 #!/system/bin/sh
 # mount_drive.sh - auto-mount the ext4 SSD (label: DRIVE) to /the_binding
@@ -454,10 +458,11 @@ read DUMMY
 
 ---
 
-## 5. Modifications to pixel-backup-gang
+## 5. Modifications to the original scripts
 
-The scripts in `/data/local/tmp/pixel-backup-gang/` come from the `pixel-backup-gang` project
-(https://github.com/master-hax/pixel-backup-gang). Two were **modified** and one was **added**:
+The `mount_ext4.sh` and `unmount.sh` in `/data/local/tmp/pixel-backup-ssd/` come from the
+[pixel-backup-gang](https://github.com/master-hax/pixel-backup-gang) project. Two were **modified** and one
+was **added**:
 
 ### `mount_ext4.sh` (modified)
 The original namespace guard:
@@ -495,7 +500,7 @@ See §4.5.
 
 ### Full modified files (ready to use — paste as-is, no editing needed)
 
-**`/data/local/tmp/pixel-backup-gang/mount_ext4.sh`:**
+**`/data/local/tmp/pixel-backup-ssd/mount_ext4.sh`:**
 ```sh
 #!/bin/sh -ex
 
@@ -557,7 +562,7 @@ am broadcast \
 echo "ext4 drive mounted successfully"
 ```
 
-**`/data/local/tmp/pixel-backup-gang/unmount.sh`:**
+**`/data/local/tmp/pixel-backup-ssd/unmount.sh`:**
 ```sh
 #!/bin/sh -x
 
@@ -637,7 +642,7 @@ If you ever need to touch these scripts from another machine, these are the rule
       `su -c 'setprop service.adb.tcp.port 5555; stop adbd; start adbd'`.
     - Lost after every reboot (Android 10 has no in-UI wireless-debugging toggle).
 
-14. **ext4 options:** The SSD is formatted with `-O ^metadata_csum,^64bit` (matching the pixel-backup-gang
+14. **ext4 options:** The SSD is formatted with `-O ^metadata_csum,^64bit` (matching the original project's
     docs). Don't change this — the phone's mke2fs 1.44.4 supports it and the setup is proven.
 
 15. **Thermal override (Temp Guard):** Google Photos pauses uploads when the phone reports Thermal Status
@@ -656,11 +661,11 @@ If you ever need to touch these scripts from another machine, these are the rule
 
 If the phone ever needs to be rebuilt (same machine or another), here are the steps in order:
 
-1. **Install the pixel-backup-gang scripts** to `/data/local/tmp/pixel-backup-gang/`:
-   - Grab the release tarball (e.g. `pixel-backup-gang-0.0.9.tar.gz` from the GitHub releases) and extract as
-     root into `/data/local/tmp/`, then `chmod +x *.sh`.
-   - Copy in my `mount_drive.sh` (see §4.5), and apply the tolerant namespace guard to `mount_ext4.sh` and
-     `unmount.sh` (see §5).
+1. **Install the core scripts** to `/data/local/tmp/pixel-backup-ssd/`:
+   - The easy way: run `./install.sh` from this repo on a computer — it deploys all three scripts with the
+     right permissions and prints what it did.
+   - By hand: copy `mount_drive.sh`, `mount_ext4.sh` and `unmount.sh` out of `scripts/phone/`, `chmod +x`
+     them, and place them as root in `/data/local/tmp/pixel-backup-ssd/` (see §4.5 and §5).
 
 2. **Install the exFAT tooling** to `/data/local/tmp/format-tools/` (from the official Termux repo,
    aarch64 `.deb`s — download on a computer, then `adb push` and extract as root on the phone):
