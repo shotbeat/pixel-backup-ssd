@@ -96,11 +96,18 @@ esac
 
 # ------------------------------------------------------------ 1. core scripts
 step "Installing core scripts -> $SSD_DIR"
-su_sh "mkdir -p $SSD_DIR" >/dev/null
+# adb push runs as the unprivileged `shell` user, so stage into /data/local/tmp
+# (which shell can write to) and let root move the files into place. Pushing
+# straight into $SSD_DIR fails on a fresh phone, where root owns that directory.
+adb_s shell "rm -rf $STAGE_DIR/phone; mkdir -p $STAGE_DIR/phone" >/dev/null
 for f in $CORE_SCRIPTS; do
-  adb_s push "$REPO_DIR/scripts/phone/$f" "$SSD_DIR/$f" >/dev/null
+  adb_s push "$REPO_DIR/scripts/phone/$f" "$STAGE_DIR/phone/$f" >/dev/null
 done
-su_sh "chmod 755 $SSD_DIR/*.sh" >/dev/null
+su_sh "
+  mkdir -p '$SSD_DIR'
+  cp -f $STAGE_DIR/phone/*.sh '$SSD_DIR/'
+  chmod 755 '$SSD_DIR/'*.sh
+" >/dev/null
 ok "core scripts installed"
 
 # --------------------------------------------------------- 2. Termux buttons
@@ -130,7 +137,7 @@ for f in $BUTTON_SCRIPTS; do
 done
 
 CTX_CMD=""
-[ -n "$T_CTX" ] && CTX_CMD="chcon $T_CTX $SHORTCUTS_DIR/*.sh;"
+[ -n "$T_CTX" ] && CTX_CMD="chcon -R $T_CTX '$SHORTCUTS_DIR';"
 
 su_sh "
   mkdir -p '$SHORTCUTS_DIR'
@@ -248,6 +255,9 @@ else
   printf '       %s\n' "$VERSION_RAW"
   warn "the 'Format -> exFAT' button may not work (ext4 formatting is unaffected)"
 fi
+
+# ----------------------------------------------------------- 4. tidy up -----
+su_sh "rm -rf $STAGE_DIR" >/dev/null
 
 # ------------------------------------------------------------- done ---------
 cat <<EOF
